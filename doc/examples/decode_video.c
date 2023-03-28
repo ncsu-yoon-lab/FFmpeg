@@ -31,10 +31,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include <libavcodec/avcodec.h>
 
 #define INBUF_SIZE 4096
+float sum = 0;
+float avg = 0;
 
 static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
                      char *filename)
@@ -55,6 +58,11 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
     char buf[1024];
     int ret;
 
+    struct timeval t1, t2;
+    double elapsedTime;
+
+    gettimeofday(&t1, NULL);
+    
     ret = avcodec_send_packet(dec_ctx, pkt);
     if (ret < 0) {
         fprintf(stderr, "Error sending a packet for decoding\n");
@@ -70,8 +78,14 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
             exit(1);
         }
 
-        printf("saving frame %3"PRId64"\n", dec_ctx->frame_num);
+        gettimeofday(&t2, NULL);
+        elapsedTime = (t2.tv_sec - t1.tv_sec)*1000.0;
+        elapsedTime = (t2.tv_usec - t1.tv_usec)/1000.0;
+        // printf("saving frame %3"PRId64"\n", dec_ctx->frame_num);
+        printf("Decoding frame %3"PRId64" time: %f\n", dec_ctx->frame_num, elapsedTime);
         fflush(stdout);
+        if (elapsedTime > 0)
+            sum += elapsedTime;
 
         /* the picture is allocated by the decoder. no need to
            free it */
@@ -105,8 +119,10 @@ int main(int argc, char **argv)
     outfilename = argv[2];
 
     pkt = av_packet_alloc();
-    if (!pkt)
+    if (!pkt) {
+        fprintf(stderr, "No packets!");
         exit(1);
+    }
 
     /* set end of buffer to 0 (this ensures that no overreading happens for damaged MPEG streams) */
     memset(inbuf + INBUF_SIZE, 0, AV_INPUT_BUFFER_PADDING_SIZE);
@@ -147,7 +163,11 @@ int main(int argc, char **argv)
     }
 
     frame = av_frame_alloc();
+    if (!frame) {frame = av_frame_alloc();
     if (!frame) {
+        fprintf(stderr, "Could not allocate video frame\n");
+        exit(1);
+    }
         fprintf(stderr, "Could not allocate video frame\n");
         exit(1);
     }
@@ -182,6 +202,8 @@ int main(int argc, char **argv)
     decode(c, frame, NULL, outfilename);
 
     fclose(f);
+    avg = sum/150.0;
+    printf("Average time for decoding: %f \n", avg);
 
     av_parser_close(parser);
     avcodec_free_context(&c);
