@@ -4,6 +4,12 @@ FFmpeg README
 FFmpeg is a collection of libraries and tools to process multimedia content
 such as audio, video, subtitles and related metadata.
 
+CompML README
+=============
+
+CompML uses FFmpeg libraries to implement simultaneous encoded data logging
+and decoding of compressed packets. 
+
 ## Libraries
 
 * `libavcodec` provides implementation of a wider range of codecs.
