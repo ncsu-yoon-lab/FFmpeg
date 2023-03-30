@@ -14,6 +14,10 @@
 
 #include <libavutil/opt.h>
 #include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
+
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_thread.h>
 
 #define INBUF_SIZE 4096
 
@@ -83,7 +87,7 @@ static char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
 }
 
 static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
-                   const char *filename)
+                   const char *filename, SDL_Renderer* renderer, SDL_Texture* texture)
 {
     char buf[1024];
     int ret;
@@ -120,6 +124,21 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
         /* the picture is allocated by the decoder. no need to
            free it */
         snprintf(buf, sizeof(buf), "%s-%"PRId64, filename, dec_ctx->frame_num);
+        /* Display the decoded images on the screen*/
+        SDL_UpdateYUVTexture(
+                    texture,
+                    NULL,
+                    frame->data[0],
+                    dec_ctx->width,
+                    frame->data[1],
+                    frame->linesize[1],
+                    frame->data[2],
+                    frame->linesize[1]
+                );
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, texture, NULL, NULL);
+            SDL_RenderPresent(renderer);
+
         pgm_save(frame->data[0], frame->linesize[0],
                  frame->width, frame->height, buf);
     }
@@ -148,7 +167,17 @@ int main(int argc, char** argv) {
     char* img;
 
     int data_size;
-    uint8_t inbuf[INBUF_SIZE + AV_INPUT_BUFFER_PADDING_SIZE];
+
+    SDL_Surface* screen;
+    SDL_Renderer *renderer;
+    SDL_Texture *texture;
+    int uvPitch;
+    SDL_Event event;
+
+    if (SDL_Init(SDL_INIT_VIDEO)) {
+        fprintf(stderr, "Could not initialize SDL - %s\n", SDL_GetError());
+        exit(1);
+    }
 
 
     if (argc <= 2) {
@@ -203,8 +232,6 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-    memset(inbuf + INBUF_SIZE, 0, AV_INPUT_BUFFER_PADDING_SIZE);
-
     /* put sample parameters */
     c->bit_rate = 400000;
     /* resolution must be a multiple of two */
@@ -251,6 +278,42 @@ int main(int argc, char** argv) {
     frame->format = c->pix_fmt;
     frame->width  = c->width;
     frame->height = c->height;
+
+    /* Make a screen to display video*/
+    screen = SDL_CreateWindow(
+            "CompML Decoded Display",
+            SDL_WINDOWPOS_UNDEFINED,
+            SDL_WINDOWPOS_UNDEFINED,
+            c->width,
+            c->height,
+            0
+        );
+    if (!screen) {
+        fprintf(stderr, "SDL could not create window - exiting \n");
+        exit(1);
+    }
+
+    renderer = SDL_CreateRenderer(screen, -1, 0);
+    if (!renderer) {
+        fprintf(stderr, "SDL: could not create renderer - exiting\n");
+        exit(1);
+    }
+
+    // Allocate a place to put our YUV image on that screen
+    texture = SDL_CreateTexture(
+            renderer,
+            SDL_PIXELFORMAT_YV12,
+            SDL_TEXTUREACCESS_STREAMING,
+            c->width,
+            c->height
+        );
+    if (!texture) {
+        fprintf(stderr, "SDL: could not create texture - exiting\n");
+        exit(1);
+    }
+
+    // set up YV12 Texture pitches
+    uvPitch = c->width / 2;
 
     d_frame = av_frame_alloc();
     if (!d_frame) {
@@ -325,7 +388,7 @@ int main(int argc, char** argv) {
             }
             
             if (d_pkt->size) {
-                decode(d, d_frame, d_pkt, outdir);
+                decode(d, d_frame, d_pkt, outdir, renderer, texture);
             }
             
         }while (data_size);
@@ -335,13 +398,28 @@ int main(int argc, char** argv) {
     
     fclose(istream);
     free(img);
+     /* flush the decoder */
+    decode(d, d_frame, NULL, outdir, renderer, texture);
+
+    SDL_PollEvent(&event);
+    switch (event.type) {
+    case SDL_QUIT:
+        SDL_DestroyTexture(texture);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(screen);
+        SDL_Quit();
+        exit(0);
+        break;
+    default:
+        break;
+    }
 
     /* flush the encoder */
     encode(c, NULL, pkt, f);
     av_packet_unref(pkt);
 
-    /* flush the decoder */
-    decode(d, d_frame, NULL, outdir);
+   
+    // decode(d, d_frame, NULL, outdir);
 
     av_parser_close(parser);
     avcodec_free_context(&d);

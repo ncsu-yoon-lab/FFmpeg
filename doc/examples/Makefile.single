@@ -8,8 +8,8 @@ FFMPEG_LIBS=    libavdevice                        \
                 libavutil                          \
 
 CFLAGS += -Wall -g
-CFLAGS := $(shell pkg-config --cflags $(FFMPEG_LIBS)) $(CFLAGS)
-LDLIBS := $(shell pkg-config --libs $(FFMPEG_LIBS)) $(LDLIBS)
+CFLAGS := $(shell pkg-config --cflags $(FFMPEG_LIBS) sdl2) $(CFLAGS)
+LDLIBS := $(shell pkg-config --libs $(FFMPEG_LIBS) sdl2) $(LDLIBS)
 
 # missing the following targets, since they need special options in the FFmpeg build:
 # qsv_decode
