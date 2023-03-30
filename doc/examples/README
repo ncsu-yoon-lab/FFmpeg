@@ -1,3 +1,18 @@
+CompML example README
+----------------------
+
+Before compiling the CompML example, please ensure FFMpeg is installed and built from source as well.
+
+1) Compile the example:
+
+make -f Makefile.single clean
+make -f Makefile.single
+
+2) Run the example:
+
+./my_app mpeg1video your_logged_video.mp1 path_to_image_dir
+
+
 FFmpeg examples README
 ----------------------
 
