@@ -8,7 +8,10 @@ CompML README
 =============
 
 CompML uses FFmpeg libraries to implement simultaneous encoded data logging
-and decoding of compressed packets. 
+and decoding of compressed packets.
+
+A sample CompML implementation is present in doc/examples. Read the README in the folder
+for further instructions on compilation and running of the example
 
 ## Libraries
 
