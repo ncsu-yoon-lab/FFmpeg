@@ -171,8 +171,10 @@ int main(int argc, char** argv) {
     SDL_Surface* screen;
     SDL_Renderer *renderer;
     SDL_Texture *texture;
-    int uvPitch;
-    SDL_Event event;
+
+    SDL_Surface* e_screen;
+    SDL_Renderer *e_renderer;
+    SDL_Texture *e_texture;
 
     if (SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "Could not initialize SDL - %s\n", SDL_GetError());
@@ -279,7 +281,7 @@ int main(int argc, char** argv) {
     frame->width  = c->width;
     frame->height = c->height;
 
-    /* Make a screen to display video*/
+    /* Make a screen to display video of decoded output and raw camera input */
     screen = SDL_CreateWindow(
             "CompML Decoded Display",
             SDL_WINDOWPOS_UNDEFINED,
@@ -289,13 +291,32 @@ int main(int argc, char** argv) {
             0
         );
     if (!screen) {
-        fprintf(stderr, "SDL could not create window - exiting \n");
+        fprintf(stderr, "SDL could not create window for decoded ouput - exiting \n");
+        exit(1);
+    }
+
+    e_screen = SDL_CreateWindow(
+            "CompML Raw Image Stream Display",
+            SDL_WINDOWPOS_UNDEFINED,
+            SDL_WINDOWPOS_UNDEFINED,
+            c->width,
+            c->height,
+            0
+        );
+    if (!e_screen) {
+        fprintf(stderr, "SDL could not create window for raw image stream - exiting \n");
         exit(1);
     }
 
     renderer = SDL_CreateRenderer(screen, -1, 0);
     if (!renderer) {
-        fprintf(stderr, "SDL: could not create renderer - exiting\n");
+        fprintf(stderr, "SDL: could not create renderer for decoded ouput- exiting\n");
+        exit(1);
+    }
+
+    e_renderer = SDL_CreateRenderer(e_screen, 0, 0);
+    if (!e_renderer) {
+        fprintf(stderr, "SDL: could not create renderer for raw image stream - exiting\n");
         exit(1);
     }
 
@@ -312,8 +333,17 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-    // set up YV12 Texture pitches
-    uvPitch = c->width / 2;
+    e_texture = SDL_CreateTexture(
+            e_renderer,
+            SDL_PIXELFORMAT_YV12,
+            SDL_TEXTUREACCESS_STREAMING,
+            c->width,
+            c->height
+        );
+    if (!e_texture) {
+        fprintf(stderr, "SDL: could not create texture - exiting\n");
+        exit(1);
+    }
 
     d_frame = av_frame_alloc();
     if (!d_frame) {
@@ -327,14 +357,14 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-    size = 60*3*480*640;
+    size = 160*3*480*640;
     img = (char*)malloc(size*sizeof(char));
     img_file_path = "/home/dhruva/my_sample/raw_video.yuv";
     istream = fopen(img_file_path, "r");
     fread(img, sizeof(char), size, istream);
 
     /* encode 2 second of video */
-    for (i = 0; i < 50; i++) {
+    for (i = 0; i < 150; i++) {
         fflush(stdout);
 
         /* Make sure the frame data is writable.
@@ -370,6 +400,21 @@ int main(int argc, char** argv) {
         }
 
         frame->pts = i;
+        /* Display the raw images stream on the screen*/
+        SDL_UpdateYUVTexture(
+                    e_texture,
+                    NULL,
+                    frame->data[0],
+                    c->width,
+                    frame->data[1],
+                    frame->linesize[1],
+                    frame->data[2],
+                    frame->linesize[1]
+                );
+        SDL_RenderClear(e_renderer);
+        SDL_RenderCopy(e_renderer, e_texture, NULL, NULL);
+        SDL_RenderPresent(e_renderer);
+
 
         /* encode the image */
         buff = encode(c, frame, pkt, f);
@@ -401,26 +446,11 @@ int main(int argc, char** argv) {
      /* flush the decoder */
     decode(d, d_frame, NULL, outdir, renderer, texture);
 
-    SDL_PollEvent(&event);
-    switch (event.type) {
-    case SDL_QUIT:
-        SDL_DestroyTexture(texture);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(screen);
-        SDL_Quit();
-        exit(0);
-        break;
-    default:
-        break;
-    }
-
     /* flush the encoder */
     encode(c, NULL, pkt, f);
     av_packet_unref(pkt);
 
-   
-    // decode(d, d_frame, NULL, outdir);
-
+    /* flush ffmpeg resources */
     av_parser_close(parser);
     avcodec_free_context(&d);
     avcodec_free_context(&c);
@@ -429,4 +459,12 @@ int main(int argc, char** argv) {
     av_packet_free(&pkt);
     av_packet_free(&d_pkt);
 
+    /* flush SDL resources*/
+    SDL_DestroyTexture(texture);
+    SDL_DestroyTexture(e_texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyRenderer(e_renderer);
+    SDL_DestroyWindow(screen);
+    SDL_DestroyWindow(e_screen);
+    SDL_Quit();
 }
