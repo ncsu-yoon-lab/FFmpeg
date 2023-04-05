@@ -26,6 +26,13 @@
 // float sum_decode = 0;
 // float avg_decode = 0;
 int frame_buff_size = 10*3*480*640;
+struct timeval t1, t2;
+double elapsedTime;
+
+struct Stats {
+    int frame_num;
+    double t1, t2;
+}
 
 
 static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
@@ -46,15 +53,12 @@ static char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
 {
     int ret;
     char* buff;
-    // struct timeval t1, t2;
-    // double elapsedTime;
+    
     buff = (char*)malloc(frame_buff_size*sizeof(char));
 
     /* send the frame to the encoder */
     // if (frame)
     //     printf("Send frame %3"PRId64"\n", frame->pts);
-    
-    // gettimeofday(&t1, NULL);
 
     ret = avcodec_send_frame(enc_ctx, frame);
     if (ret < 0) {
@@ -71,8 +75,6 @@ static char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
             exit(1);
         }
         // gettimeofday(&t2, NULL);
-        // elapsedTime = (t2.tv_sec - t1.tv_sec)*1000.0;
-        // elapsedTime = (t2.tv_usec - t1.tv_usec)/1000.0;
 
         printf("Write packet %3"PRId64" (size=%5d)\n", pkt->pts, pkt->size);
 
@@ -91,11 +93,6 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
 {
     char buf[1024];
     int ret;
-
-    // struct timeval t1, t2;
-    // double elapsedTime;
-
-    // gettimeofday(&t1, NULL);
     
     ret = avcodec_send_packet(dec_ctx, pkt);
     if (ret < 0) {
@@ -112,14 +109,12 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
             exit(1);
         }
 
-        // gettimeofday(&t2, NULL);
-        // elapsedTime = (t2.tv_sec - t1.tv_sec)*1000.0;
-        // elapsedTime = (t2.tv_usec - t1.tv_usec)/1000.0;
+        gettimeofday(&t2, NULL);
+        elapsedTime = (t2.tv_sec - t1.tv_sec)*1000.0;
+        elapsedTime = (t2.tv_usec - t1.tv_usec)/1000.0;
         printf("saving frame %3"PRId64"\n", dec_ctx->frame_num);
-        // printf("Decoding frame %3"PRId64" time: %f\n", dec_ctx->frame_num, elapsedTime);
+        printf("Latency for frame %3"PRId64": %f\n", dec_ctx->frame_num, elapsedTime);
         fflush(stdout);
-        // if (elapsedTime > 0)
-        //     sum_decode += elapsedTime;
 
         /* the picture is allocated by the decoder. no need to
            free it */
@@ -417,6 +412,7 @@ int main(int argc, char** argv) {
 
 
         /* encode the image */
+        gettimeofday(&t1, NULL);
         buff = encode(c, frame, pkt, f);
         data_size = pkt->size;
 

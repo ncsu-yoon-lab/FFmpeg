@@ -1,0 +1,448 @@
+Write packet   0 (size=37463)
+Write packet   2 (size=52636)
+saving frame   1
+Latency for frame   1: 8.862000
+Write packet   1 (size=13023)
+saving frame   2
+Latency for frame   2: 5.364000
+Write packet   4 (size=41713)
+saving frame   3
+Latency for frame   3: 6.937000
+Write packet   3 (size= 1577)
+saving frame   4
+Latency for frame   4: 2.778000
+Write packet   6 (size=43025)
+saving frame   5
+Latency for frame   5: 7.099000
+Write packet   5 (size=24372)
+saving frame   6
+Latency for frame   6: 8.780000
+Write packet   8 (size=21838)
+saving frame   7
+Latency for frame   7: 4.041000
+Write packet   7 (size=13111)
+saving frame   8
+Latency for frame   8: 3.989000
+Write packet  10 (size=40131)
+saving frame   9
+Latency for frame   9: 5.750000
+Write packet   9 (size= 2977)
+saving frame  10
+Latency for frame  10: 3.089000
+Write packet  12 (size= 7359)
+saving frame  11
+Latency for frame  11: 2.618000
+Write packet  11 (size= 4120)
+saving frame  12
+Latency for frame  12: 3.495000
+Write packet  14 (size=12013)
+saving frame  13
+Latency for frame  13: 3.687000
+Write packet  13 (size= 2420)
+saving frame  14
+Latency for frame  14: 3.248000
+Write packet  16 (size= 4287)
+saving frame  15
+Latency for frame  15: 2.170000
+Write packet  15 (size= 1901)
+saving frame  16
+Latency for frame  16: 3.187000
+Write packet  18 (size= 1320)
+saving frame  17
+Latency for frame  17: 1.616000
+Write packet  17 (size= 1003)
+saving frame  18
+Latency for frame  18: 2.674000
+Write packet  20 (size=21390)
+saving frame  19
+Latency for frame  19: 4.188000
+Write packet  19 (size= 2650)
+saving frame  20
+Latency for frame  20: 3.752000
+Write packet  22 (size= 1651)
+saving frame  21
+Latency for frame  21: 1.732000
+Write packet  21 (size= 1297)
+saving frame  22
+Latency for frame  22: 2.783000
+Write packet  24 (size= 1180)
+saving frame  23
+Latency for frame  23: 1.531000
+Write packet  23 (size= 1122)
+saving frame  24
+Latency for frame  24: 2.678000
+Write packet  26 (size= 5098)
+saving frame  25
+Latency for frame  25: 2.449000
+Write packet  25 (size= 2450)
+saving frame  26
+Latency for frame  26: 3.097000
+Write packet  28 (size= 5297)
+saving frame  27
+Latency for frame  27: 2.572000
+Write packet  27 (size= 2811)
+saving frame  28
+Latency for frame  28: 3.507000
+Write packet  30 (size=16057)
+saving frame  29
+Latency for frame  29: 3.787000
+Write packet  29 (size= 2516)
+saving frame  30
+Latency for frame  30: 3.130000
+Write packet  32 (size= 1182)
+saving frame  31
+Latency for frame  31: 1.524000
+Write packet  31 (size= 1432)
+saving frame  32
+Latency for frame  32: 2.984000
+Write packet  34 (size= 2326)
+saving frame  33
+Latency for frame  33: 1.732000
+Write packet  33 (size= 1896)
+saving frame  34
+Latency for frame  34: 3.172000
+Write packet  36 (size= 3332)
+saving frame  35
+Latency for frame  35: 1.914000
+Write packet  35 (size= 3160)
+saving frame  36
+Latency for frame  36: 3.559000
+Write packet  38 (size= 4618)
+saving frame  37
+Latency for frame  37: 2.357000
+Write packet  37 (size= 2211)
+saving frame  38
+Latency for frame  38: 3.312000
+Write packet  40 (size=15347)
+saving frame  39
+Latency for frame  39: 3.720000
+Write packet  39 (size= 2196)
+saving frame  40
+Latency for frame  40: 3.309000
+Write packet  42 (size= 3621)
+saving frame  41
+Latency for frame  41: 2.069000
+Write packet  41 (size= 3428)
+saving frame  42
+Latency for frame  42: 3.593000
+Write packet  44 (size= 2739)
+saving frame  43
+Latency for frame  43: 1.922000
+Write packet  43 (size= 2905)
+saving frame  44
+Latency for frame  44: 3.718000
+Write packet  46 (size= 3477)
+saving frame  45
+Latency for frame  45: 2.140000
+Write packet  45 (size= 2903)
+saving frame  46
+Latency for frame  46: 3.523000
+Write packet  48 (size= 3583)
+saving frame  47
+Latency for frame  47: 2.126000
+Write packet  47 (size= 3329)
+saving frame  48
+Latency for frame  48: 3.544000
+Write packet  50 (size=15208)
+saving frame  49
+Latency for frame  49: 3.851000
+Write packet  49 (size= 3918)
+saving frame  50
+Latency for frame  50: 3.844000
+Write packet  52 (size= 3094)
+saving frame  51
+Latency for frame  51: 1.938000
+Write packet  51 (size= 2480)
+saving frame  52
+Latency for frame  52: 2.837000
+Write packet  54 (size= 4040)
+saving frame  53
+Latency for frame  53: 2.098000
+Write packet  53 (size= 3497)
+saving frame  54
+Latency for frame  54: 3.018000
+Write packet  56 (size= 4614)
+saving frame  55
+Latency for frame  55: 2.259000
+Write packet  55 (size= 3901)
+saving frame  56
+Latency for frame  56: 3.331000
+Write packet  58 (size= 3596)
+saving frame  57
+Latency for frame  57: 2.062000
+Write packet  57 (size= 2651)
+saving frame  58
+Latency for frame  58: 3.043000
+Write packet  60 (size=14834)
+saving frame  59
+Latency for frame  59: 3.739000
+Write packet  59 (size= 2454)
+saving frame  60
+Latency for frame  60: 3.088000
+Write packet  62 (size=11454)
+saving frame  61
+Latency for frame  61: 4.290000
+Write packet  61 (size= 4377)
+saving frame  62
+Latency for frame  62: 4.407000
+Write packet  64 (size=10269)
+saving frame  63
+Latency for frame  63: 3.858000
+Write packet  63 (size= 3824)
+saving frame  64
+Latency for frame  64: 3.966000
+Write packet  66 (size= 3711)
+saving frame  65
+Latency for frame  65: 2.123000
+Write packet  65 (size= 3020)
+saving frame  66
+Latency for frame  66: 3.397000
+Write packet  68 (size= 4084)
+saving frame  67
+Latency for frame  67: 2.272000
+Write packet  67 (size= 1756)
+saving frame  68
+Latency for frame  68: 3.005000
+Write packet  70 (size=16445)
+saving frame  69
+Latency for frame  69: 3.807000
+Write packet  69 (size= 2492)
+saving frame  70
+Latency for frame  70: 2.970000
+Write packet  72 (size= 4246)
+saving frame  71
+Latency for frame  71: 2.119000
+Write packet  71 (size= 3575)
+saving frame  72
+Latency for frame  72: 3.254000
+Write packet  74 (size= 6689)
+saving frame  73
+Latency for frame  73: 2.794000
+Write packet  73 (size= 4964)
+saving frame  74
+Latency for frame  74: 3.744000
+Write packet  76 (size= 5101)
+saving frame  75
+Latency for frame  75: 2.349000
+Write packet  75 (size= 5615)
+saving frame  76
+Latency for frame  76: 4.015000
+Write packet  78 (size= 5095)
+saving frame  77
+Latency for frame  77: 2.394000
+Write packet  77 (size= 5124)
+saving frame  78
+Latency for frame  78: 3.998000
+Write packet  80 (size=16012)
+saving frame  79
+Latency for frame  79: 3.741000
+Write packet  79 (size= 4681)
+saving frame  80
+Latency for frame  80: 3.810000
+Write packet  82 (size= 6503)
+saving frame  81
+Latency for frame  81: 2.519000
+Write packet  81 (size= 5270)
+saving frame  82
+Latency for frame  82: 3.930000
+Write packet  84 (size= 6621)
+saving frame  83
+Latency for frame  83: 2.598000
+Write packet  83 (size= 5899)
+saving frame  84
+Latency for frame  84: 4.024000
+Write packet  86 (size= 7536)
+saving frame  85
+Latency for frame  85: 3.015000
+Write packet  85 (size= 5626)
+saving frame  86
+Latency for frame  86: 4.115000
+Write packet  88 (size= 3771)
+saving frame  87
+Latency for frame  87: 2.178000
+Write packet  87 (size= 4157)
+saving frame  88
+Latency for frame  88: 4.070000
+Write packet  90 (size=17320)
+saving frame  89
+Latency for frame  89: 3.900000
+Write packet  89 (size= 4478)
+saving frame  90
+Latency for frame  90: 3.873000
+Write packet  92 (size=11594)
+saving frame  91
+Latency for frame  91: 4.168000
+Write packet  91 (size= 3600)
+saving frame  92
+Latency for frame  92: 3.858000
+Write packet  94 (size= 8332)
+saving frame  93
+Latency for frame  93: 3.285000
+Write packet  93 (size= 3726)
+saving frame  94
+Latency for frame  94: 3.654000
+Write packet  96 (size= 3798)
+saving frame  95
+Latency for frame  95: 2.114000
+Write packet  95 (size= 2801)
+saving frame  96
+Latency for frame  96: 3.341000
+Write packet  98 (size= 5098)
+saving frame  97
+Latency for frame  97: 2.536000
+Write packet  97 (size= 2260)
+saving frame  98
+Latency for frame  98: 3.282000
+Write packet 100 (size=15999)
+saving frame  99
+Latency for frame  99: 3.728000
+Write packet  99 (size= 1049)
+saving frame 100
+Latency for frame 100: 2.764000
+Write packet 102 (size= 2902)
+saving frame 101
+Latency for frame 101: 1.767000
+Write packet 101 (size= 2059)
+saving frame 102
+Latency for frame 102: 2.922000
+Write packet 104 (size= 2938)
+saving frame 103
+Latency for frame 103: 1.731000
+Write packet 103 (size= 1448)
+saving frame 104
+Latency for frame 104: 2.883000
+Write packet 106 (size= 3561)
+saving frame 105
+Latency for frame 105: 1.881000
+Write packet 105 (size= 2779)
+saving frame 106
+Latency for frame 106: 3.033000
+Write packet 108 (size= 3927)
+saving frame 107
+Latency for frame 107: 1.972000
+Write packet 107 (size= 3794)
+saving frame 108
+Latency for frame 108: 3.343000
+Write packet 110 (size=15732)
+saving frame 109
+Latency for frame 109: 3.747000
+Write packet 109 (size= 5052)
+saving frame 110
+Latency for frame 110: 3.688000
+Write packet 112 (size= 3777)
+saving frame 111
+Latency for frame 111: 1.971000
+Write packet 111 (size= 3796)
+saving frame 112
+Latency for frame 112: 3.075000
+Write packet 114 (size= 4585)
+saving frame 113
+Latency for frame 113: 2.172000
+Write packet 113 (size= 3732)
+saving frame 114
+Latency for frame 114: 3.092000
+Write packet 116 (size= 4186)
+saving frame 115
+Latency for frame 115: 2.097000
+Write packet 115 (size= 3831)
+saving frame 116
+Latency for frame 116: 3.239000
+Write packet 118 (size= 3851)
+saving frame 117
+Latency for frame 117: 2.045000
+Write packet 117 (size= 3310)
+saving frame 118
+Latency for frame 118: 3.123000
+Write packet 120 (size=15207)
+saving frame 119
+Latency for frame 119: 3.717000
+Write packet 119 (size= 4310)
+saving frame 120
+Latency for frame 120: 3.489000
+Write packet 122 (size= 5804)
+saving frame 121
+Latency for frame 121: 2.593000
+Write packet 121 (size= 4609)
+saving frame 122
+Latency for frame 122: 3.655000
+Write packet 124 (size= 3491)
+saving frame 123
+Latency for frame 123: 2.048000
+Write packet 123 (size= 3954)
+saving frame 124
+Latency for frame 124: 3.736000
+Write packet 126 (size= 2042)
+saving frame 125
+Latency for frame 125: 1.742000
+Write packet 125 (size= 1514)
+saving frame 126
+Latency for frame 126: 3.162000
+Write packet 128 (size= 3370)
+saving frame 127
+Latency for frame 127: 2.029000
+Write packet 127 (size= 2970)
+saving frame 128
+Latency for frame 128: 3.402000
+Write packet 130 (size=15368)
+saving frame 129
+Latency for frame 129: 3.856000
+Write packet 129 (size= 2123)
+saving frame 130
+Latency for frame 130: 3.394000
+Write packet 132 (size= 1125)
+saving frame 131
+Latency for frame 131: 1.571000
+Write packet 131 (size= 1330)
+saving frame 132
+Latency for frame 132: 2.839000
+Write packet 134 (size= 7654)
+saving frame 133
+Latency for frame 133: 3.591000
+Write packet 133 (size= 1123)
+saving frame 134
+Latency for frame 134: 3.034000
+Write packet 136 (size= 3921)
+saving frame 135
+Latency for frame 135: 2.424000
+Write packet 135 (size= 2255)
+saving frame 136
+Latency for frame 136: 3.727000
+Write packet 138 (size= 7002)
+saving frame 137
+Latency for frame 137: 3.178000
+Write packet 137 (size= 1916)
+saving frame 138
+Latency for frame 138: 3.573000
+Write packet 140 (size=16342)
+saving frame 139
+Latency for frame 139: 3.944000
+Write packet 139 (size= 1577)
+saving frame 140
+Latency for frame 140: 2.893000
+Write packet 142 (size=  821)
+saving frame 141
+Latency for frame 141: 1.664000
+Write packet 141 (size=  675)
+saving frame 142
+Latency for frame 142: 2.589000
+Write packet 144 (size= 1364)
+saving frame 143
+Latency for frame 143: 1.614000
+Write packet 143 (size= 1014)
+saving frame 144
+Latency for frame 144: 2.836000
+Write packet 146 (size= 1546)
+saving frame 145
+Latency for frame 145: 1.743000
+Write packet 145 (size= 1049)
+saving frame 146
+Latency for frame 146: 2.734000
+Write packet 148 (size= 3144)
+saving frame 147
+Latency for frame 147: 2.332000
+Write packet 147 (size= 2165)
+saving frame 148
+Latency for frame 148: 3.186000
+saving frame 149
+Latency for frame 149: 4.462000
+Write packet 149 (size=16537)
