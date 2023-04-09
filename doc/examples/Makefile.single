@@ -7,24 +7,14 @@ FFMPEG_LIBS=    libavdevice                        \
                 libswscale                         \
                 libavutil                          \
 
-CFLAGS += -Wall -g
-CFLAGS := $(shell pkg-config --cflags $(FFMPEG_LIBS) sdl2) $(CFLAGS)
-LDLIBS := $(shell pkg-config --libs $(FFMPEG_LIBS) sdl2) $(LDLIBS)
+V4L2_LIBS=  libv4l2
 
-# missing the following targets, since they need special options in the FFmpeg build:
-# qsv_decode
-# qsv_transcode
-# vaapi_encode
-# vaapi_transcode
+CFLAGS += -Wall -g
+CFLAGS := $(shell pkg-config --cflags $(FFMPEG_LIBS) $(V4L2_LIBS) sdl2) $(CFLAGS)
+LDLIBS := $(shell pkg-config --libs $(FFMPEG_LIBS) $(V4L2_LIBS) sdl2) $(LDLIBS)
 
 EXAMPLES= my_app
 OBJS=$(addsuffix .o,$(EXAMPLES))
-
-# the following examples make explicit use of the math library
-avcodec:           LDLIBS += -lm
-encode_audio:      LDLIBS += -lm
-muxing:            LDLIBS += -lm
-resampling_audio:  LDLIBS += -lm
 
 .phony: all clean-test clean
 

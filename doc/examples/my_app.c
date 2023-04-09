@@ -9,6 +9,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <assert.h>
+
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <linux/videodev2.h>
+#include <libv4l2.h>
+#include <signal.h>
 
 #include <libavcodec/avcodec.h>
 
@@ -21,18 +31,31 @@
 
 #define INBUF_SIZE 4096
 
-// float sum_encode = 0;
-// float avg_encode = 0;
-// float sum_decode = 0;
-// float avg_decode = 0;
 int frame_buff_size = 10*3*480*640;
 struct timeval t1, t2;
 double elapsedTime;
 
-struct Stats {
-    int frame_num;
-    double t1, t2;
+void ctrlc(void)
+{
+    exit(EXIT_FAILURE);
 }
+
+void xioctl(int fh, int request, void *arg)
+{
+    int r;
+    do
+    {
+        r = v4l2_ioctl(fh, request, arg);
+    } while (r == -1 && ((errno == EINTR) || (errno == EAGAIN)));
+
+    if (r == -1)
+    {
+        printf("[usbcam.h] USB request failed (%d): %s\n", errno, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+}
+
+#define usbcam_assert(CONDITION, MESSAGE) { if (!(CONDITION)) { printf("[usbcam.h] Error at line %d: %s\n", __LINE__, MESSAGE); exit(EXIT_FAILURE); } }
 
 
 static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
@@ -75,6 +98,7 @@ static char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
             exit(1);
         }
         // gettimeofday(&t2, NULL);
+        printf("You stuck here right?\n");
 
         printf("Write packet %3"PRId64" (size=%5d)\n", pkt->pts, pkt->size);
 
@@ -141,6 +165,8 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
 
 int main(int argc, char** argv) {
 
+    signal(SIGINT, ctrlc);
+
     const char *codec_name, *outfilename, *outdir; // codec, MP1 video, Image Dir
     const AVCodec *codec;   // Encoder codec
     const AVCodec *d_codec;   // Decoder codec
@@ -156,12 +182,8 @@ int main(int argc, char** argv) {
     AVPacket *d_pkt;
     AVPacket *buff;
 
-    FILE *istream;
-    char* img_file_path;
-    int size;
-    char* img;
-
-    int data_size;
+    size_t data_size;
+    int eof;
 
     SDL_Surface* screen;
     SDL_Renderer *renderer;
@@ -170,6 +192,62 @@ int main(int argc, char** argv) {
     SDL_Surface* e_screen;
     SDL_Renderer *e_renderer;
     SDL_Texture *e_texture;
+
+    char *device_name = "/dev/video0";
+    int device_buffers = 3;
+    int device_width = 640;
+    int device_height = 480;
+    int device_format = V4L2_PIX_FMT_YUYV;
+
+    printf("Opening camera %s\n", device_name);
+
+    // Open the device
+    int fd = v4l2_open(device_name, O_RDWR, 0);
+    usbcam_assert(fd >= 0, "Failed to open device");
+
+    // set format
+    struct v4l2_format fmt = {0};
+    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    fmt.fmt.pix.pixelformat = device_format;
+    fmt.fmt.pix.width = device_width;
+    fmt.fmt.pix.height = device_height;
+    xioctl(fd, VIDIOC_S_FMT, &fmt);
+    
+    usbcam_assert(fmt.fmt.pix.pixelformat == device_format, "Did not get the requested format");
+    usbcam_assert(fmt.fmt.pix.width == device_width, "Did not get the requested width");
+    usbcam_assert(fmt.fmt.pix.height == device_height, "Did not get the requested height");
+    
+    // tell the driver how many buffers we want
+    struct v4l2_requestbuffers request = {0};
+    request.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    request.memory = V4L2_MEMORY_MMAP;
+    request.count = device_buffers;
+    xioctl(fd, VIDIOC_REQBUFS, &request);
+    usbcam_assert(request.count == device_buffers, "Did not get the requested number of buffers");
+
+    // allocate buffer
+    void *buffer_start[3] = {0};
+    uint32_t buffer_length[3] = {0};
+    for (int i = 0; i < device_buffers; i++)
+    {
+        struct v4l2_buffer info = {0};
+        info.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        info.memory = V4L2_MEMORY_MMAP;
+        info.index = i;
+        xioctl(fd, VIDIOC_QUERYBUF, &info);
+
+        buffer_length[i] = info.length;
+        buffer_start[i] = mmap(
+            NULL,
+            info.length,
+            PROT_READ | PROT_WRITE,
+            MAP_SHARED,
+            fd,
+            info.m.offset
+        );
+
+        usbcam_assert(buffer_start[i] != MAP_FAILED, "Failed to allocate memory for buffers");
+    }
 
     if (SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "Could not initialize SDL - %s\n", SDL_GetError());
@@ -352,45 +430,72 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-    size = 160*3*480*640;
-    img = (char*)malloc(size*sizeof(char));
-    img_file_path = "/home/dhruva/my_sample/raw_video.yuv";
-    istream = fopen(img_file_path, "r");
-    fread(img, sizeof(char), size, istream);
+     // start streaming
+    int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    xioctl(fd, VIDIOC_STREAMON, &type);
 
-    /* encode 2 second of video */
-    for (i = 0; i < 150; i++) {
+    // queue buffers
+    for (int p = 0; p < device_buffers; p++)
+    {
+        struct v4l2_buffer info = {0};
+        info.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        info.memory = V4L2_MEMORY_MMAP;
+        info.index = p;
+        xioctl(fd, VIDIOC_QBUF, &info);
+    }
+
+    /* stream from camera */
+    for (i = 0; i < 300; i++) {
         fflush(stdout);
+        
+        /* Get latest data from camera*/
+        struct v4l2_buffer buf = {0};
+        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory = V4L2_MEMORY_MMAP;
 
-        /* Make sure the frame data is writable.
-           On the first round, the frame is fresh from av_frame_get_buffer()
-           and therefore we know it is writable.
-           But on the next rounds, encode() will have called
-           avcodec_send_frame(), and the codec may have kept a reference to
-           the frame in its internal structures, that makes the frame
-           unwritable.
-           av_frame_make_writable() checks that and allocates a new buffer
-           for the frame only if necessary.
-         */
+        // get a buffer
+        xioctl(fd, VIDIOC_DQBUF, &buf);
+        // check if there are more buffers available
+        int r = 1;
+        while (r == 1)
+        {
+            fd_set fds;
+            FD_ZERO(&fds);
+            FD_SET(fd, &fds);
+            struct timeval tv; // if both fields = 0, select returns immediately
+            tv.tv_sec = 0;
+            tv.tv_usec = 0;
+            r = select(fd + 1, &fds, NULL, NULL, &tv); // todo: what if r == -1?
+            if (r == 1)
+            {
+                printf(".");
+                // queue the previous buffer
+                xioctl(fd, VIDIOC_QBUF, &buf);
+                // get a new buffer
+                xioctl(fd, VIDIOC_DQBUF, &buf);
+            }
+        }
+
+        unsigned char *img = (unsigned char*)buffer_start[buf.index];
+        unsigned int img_size = buf.bytesused;
+
+        /* FFMpeg Encoding/Decoding and display on screen parts */
         ret = av_frame_make_writable(frame);
         if (ret < 0)
             exit(1);
 
         /* Y */
-        int offset;
-        offset = i*(480*640*1.5);
-
         for (y = 0; y < c->height; y++) {
             for (x = 0; x < c->width; x++) {
-                frame->data[0][y * frame->linesize[0] + x] = img[y * frame->linesize[0] + x + offset];
+                frame->data[0][y * frame->linesize[0] + x] = img[y * frame->linesize[0] + x];
             }
         }
 
         /* Cb and Cr */
         for (y = 0; y < c->height/2; y++) {
             for (x = 0; x < c->width/2; x++) {
-                frame->data[1][y * frame->linesize[1] + x] = img[y * frame->linesize[1] + x + offset];
-                frame->data[2][y * frame->linesize[2] + x] = img[y * frame->linesize[2] + x + offset];
+                frame->data[1][y * frame->linesize[1] + x] = img[y * frame->linesize[1] + x];
+                frame->data[2][y * frame->linesize[2] + x] = img[y * frame->linesize[2] + x];
             }
         }
 
@@ -410,36 +515,50 @@ int main(int argc, char** argv) {
         SDL_RenderCopy(e_renderer, e_texture, NULL, NULL);
         SDL_RenderPresent(e_renderer);
 
-
         /* encode the image */
         gettimeofday(&t1, NULL);
         buff = encode(c, frame, pkt, f);
         data_size = pkt->size;
 
         /* Decode the compressed packets*/
-        do
-        {
-            data_size -= dec_ret;
+
+        printf("Data size: %d \n", data_size);
+        eof = !data_size;
+        // data = buff;
+        while (data_size > 0) {
             dec_ret = av_parser_parse2(parser, d, &d_pkt->data, &d_pkt->size,
-                                buff, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
-        
+                            buff, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+            
+            printf("Dec-ret: %d \n", dec_ret);
+            
             if (dec_ret < 0) {
-             fprintf(stderr, "Error while parsing\n");
-             exit(1);
+                fprintf(stderr, "Error while parsing\n");
+                exit(1);
             }
-            
-            if (d_pkt->size) {
+            // data += dec_ret;
+            data_size -= dec_ret;
+            printf("New data size: %d \n", data_size);
+            if (d_pkt->size) 
                 decode(d, d_frame, d_pkt, outdir, renderer, texture);
-            }
+            else if (eof)
+                break;
+        }
             
-        }while (data_size);
         
         av_packet_unref(pkt);
+        xioctl(fd, VIDIOC_QBUF, &buf);
     }
     
-    fclose(istream);
-    free(img);
-     /* flush the decoder */
+    // turn off streaming
+    xioctl(fd, VIDIOC_STREAMOFF, &type);
+    close(fd);
+
+    // dequeue buffers
+
+    for (int i = 0; i < device_buffers; i++)
+        munmap(buffer_start[i], buffer_length[i]);
+     
+    /* flush the decoder */
     decode(d, d_frame, NULL, outdir, renderer, texture);
 
     /* flush the encoder */
