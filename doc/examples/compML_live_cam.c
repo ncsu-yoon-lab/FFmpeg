@@ -158,8 +158,9 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
             SDL_RenderCopy(renderer, texture, NULL, NULL);
             SDL_RenderPresent(renderer);
 
-        pgm_save(frame->data[0], frame->linesize[0],
-                 frame->width, frame->height, buf);
+        /* Uncomment below code to save images */
+        // pgm_save(frame->data[0], frame->linesize[0],
+        //          frame->width, frame->height, buf);
     }
 }
 
@@ -273,7 +274,7 @@ int main(int argc, char** argv) {
     }
 
     /* find the MPEG-1 video decoder */
-    d_codec = avcodec_find_decoder(AV_CODEC_ID_MPEG1VIDEO);
+    d_codec = avcodec_find_decoder(AV_CODEC_ID_MPEG4);
     if (!d_codec) {
         fprintf(stderr, "Codec not found\n");
         exit(1);
@@ -524,8 +525,8 @@ int main(int argc, char** argv) {
 
         printf("Data size: %d \n", data_size);
         eof = !data_size;
-        // data = buff;
-        while (data_size > 0) {
+
+         do {
             dec_ret = av_parser_parse2(parser, d, &d_pkt->data, &d_pkt->size,
                             buff, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
             
@@ -542,7 +543,7 @@ int main(int argc, char** argv) {
                 decode(d, d_frame, d_pkt, outdir, renderer, texture);
             else if (eof)
                 break;
-        }
+        } while (data_size > 0 || eof);
             
         
         av_packet_unref(pkt);
