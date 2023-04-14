@@ -73,7 +73,7 @@ static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
         elapsedTime = (t2.tv_usec - t1.tv_usec)/1000.0;
 
         printf("Write packet %3"PRId64" (size=%5d)\n", pkt->pts, pkt->size);
-        printf("Encoding time for %1"PRId64" %f\n", pkt->pts, elapsedTime);
+        // printf("Encoding time for %1"PRId64" %f\n", pkt->pts, elapsedTime);
         if (elapsedTime > 0)
             sum += elapsedTime;
         fwrite(pkt->data, 1, pkt->size, outfile);
@@ -86,7 +86,8 @@ int main(int argc, char **argv)
     const char *filename, *codec_name;
     const AVCodec *codec;
     AVCodecContext *c= NULL;
-    int i, ret, x, y;
+    int ret, x, y;
+    int i = 0;
     FILE *f;
     AVFrame *frame;
     AVPacket *pkt;
@@ -94,8 +95,11 @@ int main(int argc, char **argv)
 
     FILE *istream;
     char* img_file_path;
-    int size;
-    char* img;
+    float size;
+    unsigned char* img;
+
+    int eofile;
+    size_t read_size;
 
     if (argc <= 2) {
         fprintf(stderr, "Usage: %s <output file> <codec name>\n", argv[0]);
@@ -124,11 +128,11 @@ int main(int argc, char **argv)
     /* put sample parameters */
     c->bit_rate = 400000;
     /* resolution must be a multiple of two */
-    c->width = 640;
-    c->height = 480;
+    c->width = 320;
+    c->height = 160;
     /* frames per second */
-    c->time_base = (AVRational){1, 25};
-    c->framerate = (AVRational){25, 1};
+    c->time_base = (AVRational){1, 20};
+    c->framerate = (AVRational){20, 1};
 
     /* emit one intra frame every ten frames
      * check frame pict_type before passing frame
@@ -171,15 +175,20 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    size = 200*3*480*640;
-    img = (char*)malloc(size*sizeof(char));
-    img_file_path = "/home/dhruva/my_sample/raw_video.yuv";
+    size = 1.5*320*160;
+    img = (unsigned char*)malloc(size*sizeof(unsigned char));
+    img_file_path = "/home/dhruva/my_sample/2016-06-08--11-46-01.yuv";
     istream = fopen(img_file_path, "r");
-    fread(img, sizeof(char), size, istream);
+
+    int u_index = (c->width)*(c->height);
+    int v_index = u_index + (c->width)*(c->height)/4;
 
     /* encode 1 second of video */
-    for (i = 0; i < 150; i++) {
+    do {// 18177
         fflush(stdout);
+
+        read_size = fread(img, sizeof(unsigned char), size, istream);
+        eofile = !read_size;
 
         /* Make sure the frame data is writable.
            On the first round, the frame is fresh from av_frame_get_buffer()
@@ -196,28 +205,26 @@ int main(int argc, char **argv)
             exit(1);
 
         /* Y */
-        int offset;
-        offset = i*(480*640*1.5);
-
         for (y = 0; y < c->height; y++) {
             for (x = 0; x < c->width; x++) {
-                frame->data[0][y * frame->linesize[0] + x] = img[y * frame->linesize[0] + x + offset];
+                frame->data[0][y * c->width + x] = img[y * c->width + x];
             }
         }
 
         /* Cb and Cr */
         for (y = 0; y < c->height/2; y++) {
             for (x = 0; x < c->width/2; x++) {
-                frame->data[1][y * frame->linesize[1] + x] = img[y * frame->linesize[1] + x + offset];
-                frame->data[2][y * frame->linesize[2] + x] = img[y * frame->linesize[2] + x + offset];
+                frame->data[1][y * (c->width/2) + x] = img[u_index + y * (c->width/2) + x];
+                frame->data[2][y * (c->width/2) + x] = img[v_index + y * (c->width/2) + x];
             }
         }
 
         frame->pts = i;
+        i++;
 
         /* encode the image */
         encode(c, frame, pkt, f);
-    }
+    } while (i);
     
     fclose(istream);
 
@@ -234,8 +241,8 @@ int main(int argc, char **argv)
         fwrite(endcode, 1, sizeof(endcode), f);
     fclose(f);
 
-    avg = sum/150.0;
-    printf("Avg Time for Encoding: %f \n", avg);
+    // avg = sum/150.0;
+    // printf("Avg Time for Encoding: %f \n", avg);
 
     avcodec_free_context(&c);
     av_frame_free(&frame);

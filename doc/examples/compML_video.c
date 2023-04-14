@@ -19,8 +19,9 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_thread.h>
 
-int frame_buff_size = 10*3*480*640;
-
+int frame_buff_size = 10*320*160;
+struct timeval t1, t2;
+double elapsedTime;
 
 static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
                      char *filename)
@@ -35,7 +36,7 @@ static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
     fclose(f);
 }
 
-static char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
+char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
                    FILE *outfile)
 {
     int ret;
@@ -49,7 +50,6 @@ static char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
     //     printf("Send frame %3"PRId64"\n", frame->pts);
     
     // gettimeofday(&t1, NULL);
-
     ret = avcodec_send_frame(enc_ctx, frame);
     if (ret < 0) {
         fprintf(stderr, "Error sending a frame for encoding\n");
@@ -75,9 +75,12 @@ static char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
         //     sum_encode += elapsedTime;
         memcpy(buff, pkt->data, pkt->size);
         fwrite(pkt->data, 1, pkt->size, outfile);
-        
+
         return buff;
     }
+
+    free(buff);
+
 }
 
 static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
@@ -106,14 +109,10 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
             exit(1);
         }
 
-        // gettimeofday(&t2, NULL);
-        // elapsedTime = (t2.tv_sec - t1.tv_sec)*1000.0;
-        // elapsedTime = (t2.tv_usec - t1.tv_usec)/1000.0;
+        
         printf("saving frame %3"PRId64"\n", dec_ctx->frame_num);
-        // printf("Decoding frame %3"PRId64" time: %f\n", dec_ctx->frame_num, elapsedTime);
+        // printf("Latency %3"PRId64" time: %f\n", dec_ctx->frame_num, elapsedTime);
         fflush(stdout);
-        // if (elapsedTime > 0)
-        //     sum_decode += elapsedTime;
 
         /* the picture is allocated by the decoder. no need to
            free it */
@@ -147,7 +146,8 @@ int main(int argc, char** argv) {
     AVCodecParserContext *parser;   // Parse video context
     AVCodecContext *c=NULL;
     AVCodecContext *d=NULL;
-    int i, ret, x, y;
+    int ret, x, y;
+    int i = 0;
     int dec_ret;
     FILE *f;
     AVFrame *frame;
@@ -157,19 +157,19 @@ int main(int argc, char** argv) {
     AVPacket *buff;
 
     FILE *istream;
+    FILE *csvstream;
     char* img_file_path;
-    int size;
-    char* img;
+    float size;
+    unsigned char* img;
 
     int data_size;
+    int eof;
+    int eofile;
+    size_t read_size;
 
     SDL_Surface* screen;
     SDL_Renderer *renderer;
     SDL_Texture *texture;
-
-    SDL_Surface* e_screen;
-    SDL_Renderer *e_renderer;
-    SDL_Texture *e_texture;
 
     if (SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "Could not initialize SDL - %s\n", SDL_GetError());
@@ -293,28 +293,9 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-    e_screen = SDL_CreateWindow(
-            "CompML Raw Image Stream Display",
-            SDL_WINDOWPOS_UNDEFINED,
-            SDL_WINDOWPOS_UNDEFINED,
-            c->width,
-            c->height,
-            0
-        );
-    if (!e_screen) {
-        fprintf(stderr, "SDL could not create window for raw image stream - exiting \n");
-        exit(1);
-    }
-
     renderer = SDL_CreateRenderer(screen, -1, 0);
     if (!renderer) {
         fprintf(stderr, "SDL: could not create renderer for decoded ouput- exiting\n");
-        exit(1);
-    }
-
-    e_renderer = SDL_CreateRenderer(e_screen, 0, 0);
-    if (!e_renderer) {
-        fprintf(stderr, "SDL: could not create renderer for raw image stream - exiting\n");
         exit(1);
     }
 
@@ -327,18 +308,6 @@ int main(int argc, char** argv) {
             c->height
         );
     if (!texture) {
-        fprintf(stderr, "SDL: could not create texture - exiting\n");
-        exit(1);
-    }
-
-    e_texture = SDL_CreateTexture(
-            e_renderer,
-            SDL_PIXELFORMAT_YV12,
-            SDL_TEXTUREACCESS_STREAMING,
-            c->width,
-            c->height
-        );
-    if (!e_texture) {
         fprintf(stderr, "SDL: could not create texture - exiting\n");
         exit(1);
     }
@@ -356,81 +325,81 @@ int main(int argc, char** argv) {
     }
 
     size = 160*320*1.5;
-    img = (char*)malloc(size*sizeof(char));
+    img = (unsigned char*)malloc(size*sizeof(unsigned char));
     img_file_path = "/home/dhruva/my_sample/2016-06-08--11-46-01.yuv";
     istream = fopen(img_file_path, "r");
+    csvstream = fopen("test.csv", "a+");
+
+    int u_index = (c->width)*(c->height);
+    int v_index = u_index + (c->width)*(c->height)/4;
     
 
-    /* encode 2 second of video */
-    for (i = 0; i < 18177; i++) {
+    /* encode entire video */
+    do {
         
         fflush(stdout);
-        fread(img, sizeof(char), size, istream);
+        read_size = fread(img, sizeof(unsigned char), size, istream);
+        if (ferror(istream))
+            break;
+
+        eofile = !read_size;
         
         ret = av_frame_make_writable(frame);
         if (ret < 0)
             exit(1);
 
         /* Y */
-        int offset;
-        offset = (160*320*1.5);
-
         for (y = 0; y < c->height; y++) {
             for (x = 0; x < c->width; x++) {
-                frame->data[0][y * frame->linesize[0] + x] = img[y * frame->linesize[0] + x];
+                frame->data[0][y * c->width + x] = img[y * c->width + x];
             }
         }
 
         /* Cb and Cr */
         for (y = 0; y < c->height/2; y++) {
             for (x = 0; x < c->width/2; x++) {
-                frame->data[1][y * frame->linesize[1] + x] = img[y * frame->linesize[1] + x];
-                frame->data[2][y * frame->linesize[2] + x] = img[y * frame->linesize[2] + x];
+                frame->data[1][y * (c->width/2) + x] = img[u_index + y * (c->width/2) + x];
+                frame->data[2][y * (c->width/2) + x] = img[v_index + y * (c->width/2) + x];
             }
         }
 
         frame->pts = i;
-        img = img + offset;
-        /* Display the raw images stream on the screen*/
-        SDL_UpdateYUVTexture(
-                    e_texture,
-                    NULL,
-                    frame->data[0],
-                    c->width,
-                    frame->data[1],
-                    frame->linesize[1],
-                    frame->data[2],
-                    frame->linesize[1]
-                );
-        SDL_RenderClear(e_renderer);
-        SDL_RenderCopy(e_renderer, e_texture, NULL, NULL);
-        SDL_RenderPresent(e_renderer);
-
+        i++;
 
         /* encode the image */
+        gettimeofday(&t1, NULL);
         buff = encode(c, frame, pkt, f);
         data_size = pkt->size;
 
         /* Decode the compressed packets*/
-        do
-        {
-            data_size -= dec_ret;
+        eof = !data_size;
+
+         do {
             dec_ret = av_parser_parse2(parser, d, &d_pkt->data, &d_pkt->size,
-                                buff, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
-        
-            if (dec_ret < 0) {
-             fprintf(stderr, "Error while parsing\n");
-             exit(1);
-            }
+                            buff, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
             
+            // printf("Dec-ret: %d \n", dec_ret);
+            
+            if (dec_ret < 0) {
+                fprintf(stderr, "Error while parsing\n");
+                exit(1);
+            }
+            // data += dec_ret;
+            data_size -= dec_ret;
+            // printf("New data size: %d \n", data_size);
             if (d_pkt->size) {
                 decode(d, d_frame, d_pkt, outdir, renderer, texture);
+                gettimeofday(&t2, NULL);
+                elapsedTime = (t2.tv_sec - t1.tv_sec)*1000.0;
+                elapsedTime = (t2.tv_usec - t1.tv_usec)/1000.0;
+                fprintf(csvstream, "%f \n", elapsedTime);
             }
-            
-        }while (data_size);
+            else if (eof)
+                break;
+        } while (data_size > 0 || eof);
         
         av_packet_unref(pkt);
-    }
+    } while (!eofile);
     
     fclose(istream);
     free(img);
@@ -452,10 +421,7 @@ int main(int argc, char** argv) {
 
     /* flush SDL resources*/
     SDL_DestroyTexture(texture);
-    SDL_DestroyTexture(e_texture);
     SDL_DestroyRenderer(renderer);
-    SDL_DestroyRenderer(e_renderer);
     SDL_DestroyWindow(screen);
-    SDL_DestroyWindow(e_screen);
     SDL_Quit();
 }

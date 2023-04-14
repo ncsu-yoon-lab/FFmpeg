@@ -7,11 +7,13 @@ FFMPEG_LIBS=    libavdevice                        \
                 libswscale                         \
                 libavutil                          \
 
-CFLAGS += -Wall -g
-CFLAGS := $(shell pkg-config --cflags $(FFMPEG_LIBS)) $(CFLAGS)
-LDLIBS := $(shell pkg-config --libs $(FFMPEG_LIBS)) $(LDLIBS)
+V4L2_LIBS=  libv4l2
 
-EXAMPLES= encode_my_video
+CFLAGS += -Wall -g
+CFLAGS := $(shell pkg-config --cflags $(FFMPEG_LIBS) $(V4L2_LIBS) sdl2) $(CFLAGS)
+LDLIBS := $(shell pkg-config --libs $(FFMPEG_LIBS) $(V4L2_LIBS) sdl2) $(LDLIBS)
+
+EXAMPLES= compML_live_cam
 OBJS=$(addsuffix .o,$(EXAMPLES))
 
 .phony: all clean-test clean
