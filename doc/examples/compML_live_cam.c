@@ -31,7 +31,7 @@
 
 #define INBUF_SIZE 4096
 
-int frame_buff_size = 10*3*480*640;
+int frame_buff_size = 10*480*640;
 struct timeval t1, t2;
 double elapsedTime;
 
@@ -97,14 +97,8 @@ static char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
             fprintf(stderr, "Error during encoding\n");
             exit(1);
         }
-        // gettimeofday(&t2, NULL);
-        printf("You stuck here right?\n");
 
         printf("Write packet %3"PRId64" (size=%5d)\n", pkt->pts, pkt->size);
-
-        // printf("Encoding time for %1"PRId64" %f\n", pkt->pts, elapsedTime);
-        // if (elapsedTime > 0)
-        //     sum_encode += elapsedTime;
         memcpy(buff, pkt->data, pkt->size);
         fwrite(pkt->data, 1, pkt->size, outfile);
         
@@ -159,8 +153,8 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
             SDL_RenderPresent(renderer);
 
         /* Uncomment below code to save images */
-        // pgm_save(frame->data[0], frame->linesize[0],
-        //          frame->width, frame->height, buf);
+        pgm_save(frame->data[0], frame->linesize[0],
+                 frame->width, frame->height, buf);
     }
 }
 
@@ -274,7 +268,7 @@ int main(int argc, char** argv) {
     }
 
     /* find the MPEG-1 video decoder */
-    d_codec = avcodec_find_decoder(AV_CODEC_ID_MPEG4);
+    d_codec = avcodec_find_decoder(AV_CODEC_ID_H264);
     if (!d_codec) {
         fprintf(stderr, "Codec not found\n");
         exit(1);
@@ -314,8 +308,8 @@ int main(int argc, char** argv) {
     c->width = 640;
     c->height = 480;
     /* frames per second */
-    c->time_base = (AVRational){1, 25};
-    c->framerate = (AVRational){25, 1};
+    c->time_base = (AVRational){1, 20};
+    c->framerate = (AVRational){20, 1};
 
     /* emit one intra frame every ten frames
      * check frame pict_type before passing frame
@@ -325,7 +319,7 @@ int main(int argc, char** argv) {
      */
     c->gop_size = 10;
     c->max_b_frames = 1;
-    c->pix_fmt = AV_PIX_FMT_YUV420P;
+    c->pix_fmt = AV_PIX_FMT_YUV422P;
 
     /* open it */
     ret = avcodec_open2(c, codec, NULL);
@@ -397,7 +391,7 @@ int main(int argc, char** argv) {
     // Allocate a place to put our YUV image on that screen
     texture = SDL_CreateTexture(
             renderer,
-            SDL_PIXELFORMAT_YV12,
+            SDL_PIXELFORMAT_IYUV,
             SDL_TEXTUREACCESS_STREAMING,
             c->width,
             c->height
@@ -409,7 +403,7 @@ int main(int argc, char** argv) {
 
     e_texture = SDL_CreateTexture(
             e_renderer,
-            SDL_PIXELFORMAT_YV12,
+            SDL_PIXELFORMAT_IYUV,
             SDL_TEXTUREACCESS_STREAMING,
             c->width,
             c->height
@@ -444,6 +438,8 @@ int main(int argc, char** argv) {
         info.index = p;
         xioctl(fd, VIDIOC_QBUF, &info);
     }
+
+    int y_ele = (c->width)*(c->height);
 
     /* stream from camera */
     for (i = 0; i < 300; i++) {
@@ -485,19 +481,18 @@ int main(int argc, char** argv) {
         if (ret < 0)
             exit(1);
 
-        /* Y */
-        for (y = 0; y < c->height; y++) {
-            for (x = 0; x < c->width; x++) {
-                frame->data[0][y * frame->linesize[0] + x] = img[y * frame->linesize[0] + x];
-            }
+       /* Y */
+       x = 0;
+        for (y = 0; y < y_ele; y++) {
+            frame->data[0][x] = img[2*y];
+            x++;  
         }
 
-        /* Cb and Cr */
-        for (y = 0; y < c->height/2; y++) {
-            for (x = 0; x < c->width/2; x++) {
-                frame->data[1][y * frame->linesize[1] + x] = img[y * frame->linesize[1] + x];
-                frame->data[2][y * frame->linesize[2] + x] = img[y * frame->linesize[2] + x];
-            }
+        x = 0;
+        for (y = 0; y < y_ele/2; y++) {
+            frame->data[1][x] = img[2*y + 1];
+            frame->data[2][x] = img[2*y+ 3];
+            x++;  
         }
 
         frame->pts = i;
@@ -528,9 +523,7 @@ int main(int argc, char** argv) {
 
          do {
             dec_ret = av_parser_parse2(parser, d, &d_pkt->data, &d_pkt->size,
-                            buff, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
-            
-            printf("Dec-ret: %d \n", dec_ret);
+                            pkt->data, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
             
             if (dec_ret < 0) {
                 fprintf(stderr, "Error while parsing\n");
@@ -538,9 +531,10 @@ int main(int argc, char** argv) {
             }
             // data += dec_ret;
             data_size -= dec_ret;
-            printf("New data size: %d \n", data_size);
-            if (d_pkt->size) 
+            
+            if (d_pkt->size) {
                 decode(d, d_frame, d_pkt, outdir, renderer, texture);
+            }
             else if (eof)
                 break;
         } while (data_size > 0 || eof);
