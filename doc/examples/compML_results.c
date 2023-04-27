@@ -16,7 +16,6 @@
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 
-int frame_buff_size = 10*320*160;
 struct timeval t1, t2;
 double elapsedTime;
 
@@ -33,20 +32,16 @@ static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
     fclose(f);
 }
 
-char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
+static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
                    FILE *outfile)
 {
     int ret;
-    char* buff;
-    // struct timeval t1, t2;
-    // double elapsedTime;
-    buff = (char*)malloc(frame_buff_size*sizeof(char));
 
     /* send the frame to the encoder */
-    // if (frame)
-    //     printf("Send frame %3"PRId64"\n", frame->pts);
+    if (frame)
+        printf("Send frame %3"PRId64"\n", frame->pts);
     
-    // gettimeofday(&t1, NULL);
+    gettimeofday(&t1, NULL);
     ret = avcodec_send_frame(enc_ctx, frame);
     if (ret < 0) {
         fprintf(stderr, "Error sending a frame for encoding\n");
@@ -56,27 +51,17 @@ char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
     while (ret >= 0) {
         ret = avcodec_receive_packet(enc_ctx, pkt);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
-            return NULL;
+            return;
         else if (ret < 0) {
             fprintf(stderr, "Error during encoding\n");
             exit(1);
         }
-        // gettimeofday(&t2, NULL);
-        // elapsedTime = (t2.tv_sec - t1.tv_sec)*1000.0;
-        // elapsedTime = (t2.tv_usec - t1.tv_usec)/1000.0;
 
         printf("Write packet %3"PRId64" (size=%5d)\n", pkt->pts, pkt->size);
-
-        // printf("Encoding time for %1"PRId64" %f\n", pkt->pts, elapsedTime);
-        // if (elapsedTime > 0)
-        //     sum_encode += elapsedTime;
-        memcpy(buff, pkt->data, pkt->size);
         fwrite(pkt->data, 1, pkt->size, outfile);
 
-        return buff;
+        return pkt;
     }
-
-    free(buff);
 
 }
 
@@ -85,11 +70,6 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
 {
     char buf[1024];
     int ret;
-
-    // struct timeval t1, t2;
-    // double elapsedTime;
-
-    // gettimeofday(&t1, NULL);
     
     ret = avcodec_send_packet(dec_ctx, pkt);
     if (ret < 0) {
@@ -199,7 +179,7 @@ int main(int argc, char** argv) {
     }
 
     /* put sample parameters */
-    c->bit_rate = 1000000;
+    c->bit_rate = 400000;
     /* resolution must be a multiple of two */
     c->width = 320;
     c->height = 160;
@@ -213,13 +193,15 @@ int main(int argc, char** argv) {
      * then gop_size is ignored and the output of encoder
      * will always be I frame irrespective to gop_size
      */
-    c->gop_size = 20;
+    c->gop_size = 10;
     c->max_b_frames = 1;
     c->pix_fmt = AV_PIX_FMT_YUV420P;
 
-    if (codec->id == AV_CODEC_ID_H264)
+    if (codec->id == AV_CODEC_ID_H264) {
         av_opt_set(c->priv_data, "preset", "slow", 0);
-
+        // av_opt_set(c->priv_data, "tune", "zerolatency", 0);
+    }
+    
     /* open it */
     ret = avcodec_open2(c, codec, NULL);
     if (ret < 0) {
@@ -262,13 +244,12 @@ int main(int argc, char** argv) {
 
     size = 160*320*1.5;
     img = (unsigned char*)malloc(size*sizeof(unsigned char));
-    img_file_path = "/home/dhruva/my_sample/2016-01-31--19-19-25_yuv.yuv";
+    img_file_path = "/home/dhruva/my_sample/test_yuv.yuv";
     istream = fopen(img_file_path, "r");
-    csvstream = fopen("2016-01-31--19-19-25_yuv_gop20_1000kbps.csv", "a+");
+    csvstream = fopen("test_yuv.csv", "a+");
 
     int u_index = (c->width)*(c->height);
     int v_index = u_index + (c->width)*(c->height)/4;
-    
 
     /* encode entire video */
     do {
@@ -303,8 +284,7 @@ int main(int argc, char** argv) {
         i++;
 
         /* encode the image */
-        gettimeofday(&t1, NULL);
-        buff = encode(c, frame, pkt, f);
+        encode(c, frame, pkt, f);
         data_size = pkt->size;
 
         /* Decode the compressed packets*/
@@ -312,7 +292,7 @@ int main(int argc, char** argv) {
 
          do {
             dec_ret = av_parser_parse2(parser, d, &d_pkt->data, &d_pkt->size,
-                            buff, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+                            pkt->data, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
             
             // printf("Dec-ret: %d \n", dec_ret);
             

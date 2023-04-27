@@ -1,4 +1,4 @@
-/**
+ /**
  * @file libavcodec encoding video API usage example
  * @example encode_video.c
  *
@@ -19,7 +19,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_thread.h>
 
-int frame_buff_size = 10*320*160;
 struct timeval t1, t2;
 double elapsedTime;
 
@@ -36,14 +35,10 @@ static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
     fclose(f);
 }
 
-char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
+static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
                    FILE *outfile)
 {
     int ret;
-    char* buff;
-    // struct timeval t1, t2;
-    // double elapsedTime;
-    buff = (char*)malloc(frame_buff_size*sizeof(char));
 
     /* send the frame to the encoder */
     // if (frame)
@@ -59,7 +54,7 @@ char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
     while (ret >= 0) {
         ret = avcodec_receive_packet(enc_ctx, pkt);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
-            return NULL;
+            return;
         else if (ret < 0) {
             fprintf(stderr, "Error during encoding\n");
             exit(1);
@@ -73,13 +68,10 @@ char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
         // printf("Encoding time for %1"PRId64" %f\n", pkt->pts, elapsedTime);
         // if (elapsedTime > 0)
         //     sum_encode += elapsedTime;
-        memcpy(buff, pkt->data, pkt->size);
         fwrite(pkt->data, 1, pkt->size, outfile);
 
-        return buff;
+        return pkt;
     }
-
-    free(buff);
 
 }
 
@@ -133,8 +125,8 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
             SDL_RenderPresent(renderer);
 
         /* Uncomment if you want to save raw images */
-        // pgm_save(frame->data[0], frame->linesize[0],
-        //          frame->width, frame->height, buf);
+        pgm_save(frame->data[0], frame->linesize[0],
+                 frame->width, frame->height, buf);
     }
 }
 
@@ -326,7 +318,7 @@ int main(int argc, char** argv) {
 
     size = 160*320*1.5;
     img = (unsigned char*)malloc(size*sizeof(unsigned char));
-    img_file_path = "/home/dhruva/my_sample/2016-06-08--11-46-01.yuv";
+    img_file_path = "/home/dhruva/my_sample/test_yuv.yuv";
     istream = fopen(img_file_path, "r");
     csvstream = fopen("test.csv", "a+");
 
@@ -368,7 +360,7 @@ int main(int argc, char** argv) {
 
         /* encode the image */
         gettimeofday(&t1, NULL);
-        buff = encode(c, frame, pkt, f);
+        encode(c, frame, pkt, f);
         data_size = pkt->size;
 
         /* Decode the compressed packets*/
@@ -376,7 +368,7 @@ int main(int argc, char** argv) {
 
          do {
             dec_ret = av_parser_parse2(parser, d, &d_pkt->data, &d_pkt->size,
-                            buff, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+                            pkt->data, pkt->size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
             
             // printf("Dec-ret: %d \n", dec_ret);
             

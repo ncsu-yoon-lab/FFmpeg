@@ -11,7 +11,7 @@ CFLAGS += -Wall -g
 CFLAGS := $(shell pkg-config --cflags $(FFMPEG_LIBS)) $(CFLAGS)
 LDLIBS := $(shell pkg-config --libs $(FFMPEG_LIBS)) $(LDLIBS)
 
-EXAMPLES= encode_my_video
+EXAMPLES= encode_video
 OBJS=$(addsuffix .o,$(EXAMPLES))
 
 .phony: all clean-test clean

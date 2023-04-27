@@ -31,9 +31,11 @@
 
 #define INBUF_SIZE 4096
 
-int frame_buff_size = 10*480*640;
 struct timeval t1, t2;
+// struct timeval t3, t4;
 double elapsedTime;
+int enc_frame_num = 0;
+// double enc_time;
 
 void ctrlc(void)
 {
@@ -71,18 +73,16 @@ static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
     fclose(f);
 }
 
-static char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
+static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
                    FILE *outfile)
 {
     int ret;
-    char* buff;
-    
-    buff = (char*)malloc(frame_buff_size*sizeof(char));
 
     /* send the frame to the encoder */
-    // if (frame)
-    //     printf("Send frame %3"PRId64"\n", frame->pts);
+    if (frame)
+        printf("Send frame %3"PRId64"\n", frame->pts);
 
+    // gettimeofday(&t1, NULL);
     ret = avcodec_send_frame(enc_ctx, frame);
     if (ret < 0) {
         fprintf(stderr, "Error sending a frame for encoding\n");
@@ -92,17 +92,16 @@ static char* encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
     while (ret >= 0) {
         ret = avcodec_receive_packet(enc_ctx, pkt);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
-            return NULL;
+            return;
         else if (ret < 0) {
             fprintf(stderr, "Error during encoding\n");
             exit(1);
         }
 
         printf("Write packet %3"PRId64" (size=%5d)\n", pkt->pts, pkt->size);
-        memcpy(buff, pkt->data, pkt->size);
         fwrite(pkt->data, 1, pkt->size, outfile);
         
-        return buff;
+        return pkt;
     }
 }
 
@@ -127,11 +126,8 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
             exit(1);
         }
 
-        gettimeofday(&t2, NULL);
-        elapsedTime = (t2.tv_sec - t1.tv_sec)*1000.0;
-        elapsedTime = (t2.tv_usec - t1.tv_usec)/1000.0;
         printf("saving frame %3"PRId64"\n", dec_ctx->frame_num);
-        printf("Latency for frame %3"PRId64": %f\n", dec_ctx->frame_num, elapsedTime);
+        // printf("Latency for frame %3"PRId64": %f\n", dec_ctx->frame_num, elapsedTime);
         fflush(stdout);
 
         /* the picture is allocated by the decoder. no need to
@@ -321,6 +317,11 @@ int main(int argc, char** argv) {
     c->max_b_frames = 1;
     c->pix_fmt = AV_PIX_FMT_YUV422P;
 
+    if (codec->id == AV_CODEC_ID_H264) {
+        av_opt_set(c->priv_data, "preset", "slow", 0);
+        // av_opt_set(c->priv_data, "tune", "zerolatency", 0);
+    }
+
     /* open it */
     ret = avcodec_open2(c, codec, NULL);
     if (ret < 0) {
@@ -442,7 +443,7 @@ int main(int argc, char** argv) {
     int y_ele = (c->width)*(c->height);
 
     /* stream from camera */
-    for (i = 0; i < 300; i++) {
+    for (i = 0; i < 100; i++) {
         fflush(stdout);
         
         /* Get latest data from camera*/
@@ -513,12 +514,15 @@ int main(int argc, char** argv) {
 
         /* encode the image */
         gettimeofday(&t1, NULL);
-        buff = encode(c, frame, pkt, f);
+        encode(c, frame, pkt, f);
+        if (pkt->pts == frame->pts) {
+              gettimeofday(&t2, NULL);
+              elapsedTime = (t2.tv_usec - t1.tv_usec)/1000.0;
+              printf("Encode latency for frame %3"PRId64": %f\n", pkt->pts, elapsedTime);
+        }
         data_size = pkt->size;
 
         /* Decode the compressed packets*/
-
-        printf("Data size: %d \n", data_size);
         eof = !data_size;
 
          do {
@@ -529,7 +533,7 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "Error while parsing\n");
                 exit(1);
             }
-            // data += dec_ret;
+
             data_size -= dec_ret;
             
             if (d_pkt->size) {
